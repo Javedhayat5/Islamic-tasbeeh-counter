@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Islamic Tasbeeh Counter - Digital Dhikr App</title>
+<meta name="description" content="Beautiful Islamic tasbeeh counter for digital dhikr. Count SubhanAllah, Alhamdulillah, and more with a rotating bead ring.">
+<meta name="keywords" content="tasbeeh, dhikr, islamic, counter, prayer, tasbih, subhanallah, alhamdulillah">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#1e1a3c; --panel:#2a2552; --line:#463f7e;
+  --bead-off:#403978; --bead-on:#f6a5b5; --done:#ffd3a3;
+  --text:#f2eeff; --muted:#a9a3d1;
+  --sans:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --arabic:"Amiri","Noto Naskh Arabic","Geeza Pro",serif;
+}
+html{min-height:100%;font-size:clamp(16px,.5vw + 10px,22px)}
+body{
+  font-family:var(--sans); color:var(--text); background:var(--ink);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.055'%3E%3Ccircle cx='36' cy='36' r='26'/%3E%3Ccircle cx='0' cy='0' r='26'/%3E%3Ccircle cx='72' cy='0' r='26'/%3E%3Ccircle cx='0' cy='72' r='26'/%3E%3Ccircle cx='72' cy='72' r='26'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(120% 70% at 50% 0%,#3a3278 0%,var(--ink) 62%);
+  background-attachment:fixed;
+  min-height:100vh; min-height:100dvh;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--done);outline-offset:3px}
+
+.app{width:100%;max-width:34rem;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:clamp(.75rem,3vw,1.5rem) clamp(1rem,4vw,1.75rem) 1.5rem}
+.app>*{min-width:0}
+
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;padding:.25rem 0 1rem}
+.brand{display:flex;align-items:center;gap:.7rem;line-height:1}
+.logo{width:3.2rem;height:3.2rem;flex:none;filter:drop-shadow(0 0 10px rgba(246,165,181,.35))}
+.wm{font-family:var(--arabic);font-size:clamp(1.9rem,5vw,2.4rem);font-weight:700;line-height:1.45;padding-top:.15rem;
+  background:linear-gradient(90deg,#ffe9ee,#f6a5b5 55%,#ffd3a3);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand small{display:block;margin-top:-.1rem;font-family:var(--sans);font-size:.8rem;color:var(--muted);margin-top:.15rem}
+.ghost{padding:.55rem 1rem;border:1px solid var(--line);border-radius:999px;font-size:.9rem;font-weight:600}
+.ghost:hover{background:var(--panel)}
+
+/* dhikr picker */
+.picker{display:flex;gap:.5rem;overflow-x:auto;padding:.25rem 0 1rem;scrollbar-width:none}
+.picker::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:.5rem .95rem;border-radius:999px;background:var(--panel);font-size:.9rem;font-weight:600;color:var(--muted);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--bead-on);color:var(--ink)}
+
+/* dhikr text */
+.dhikr{text-align:center;width:min(100%,24rem);margin:.25rem auto 0;padding:2.4rem 1.25rem 1.1rem;
+  border:1.5px solid var(--line);border-radius:50% 50% 1.5rem 1.5rem / 5.5rem 5.5rem 1.5rem 1.5rem;
+  background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.015));
+  box-shadow:inset 0 0 0 6px #241f4a,inset 0 0 0 7px var(--line),0 18px 40px -22px #000}
+.dhikr .ar{font-family:var(--arabic);font-size:clamp(2rem,7vw,3.2rem);overflow-wrap:anywhere;line-height:1.5;font-weight:700}
+.dhikr .tr{font-weight:800;font-size:1.15rem;margin-top:.15rem}
+.dhikr .mn{color:var(--muted);font-size:.95rem;margin-top:.2rem}
+
+/* bead ring */
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem}
+.ring{position:relative;display:block;width:min(100%,22rem);aspect-ratio:1;container-type:size;border-radius:50%;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none}
+.ring svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.beads{transform-origin:150px 150px;transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
+.beads{filter:drop-shadow(0 3px 3px rgba(8,6,28,.45))}
+.bead{fill:url(#bOff)}
+.bead.on{fill:url(#bOn)}
+.done .bead.on{fill:url(#bDone)}
+.thread{fill:none;stroke:#8f86d8;stroke-opacity:.45;stroke-width:2}
+.tassel{stroke:var(--done);stroke-width:2;stroke-linecap:round;fill:none;opacity:.85}
+.ring{isolation:isolate}
+.ring::before{content:"";position:absolute;inset:-6%;border-radius:50%;z-index:-1;background:radial-gradient(closest-side,rgba(246,165,181,.24),transparent)}
+.ring.done::before{background:radial-gradient(closest-side,rgba(255,211,163,.34),transparent);animation:glow 2.6s ease-in-out infinite}
+@keyframes glow{50%{transform:scale(1.08);opacity:.7}}
+.stage{padding-top:1.75rem}
+.ring:active .face{transform:scale(.97)}
+.face{transform-origin:150px 150px;transition:transform .12s}
+.face .disc{fill:url(#bFace)}.face .orn{fill:none;stroke:#fff;stroke-opacity:.12}.face .rim{fill:none;stroke:var(--bead-on);stroke-opacity:.35;stroke-dasharray:2 7;stroke-linecap:round}
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.num{text-shadow:0 0 24px rgba(246,165,181,.45);font-size:5rem;font-size:25cqw;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.of{color:var(--muted);font-size:1rem;font-size:max(.9rem,6cqw);margin-top:.35rem}
+.done .num{color:var(--done)}
+.hint{font-size:.85rem;color:var(--muted);min-height:1.2rem}
+.reset{padding:.5rem 1.1rem;border-radius:999px;color:var(--muted);font-size:.9rem;font-weight:600}
+.reset:hover{color:var(--text);background:var(--panel)}
+
+.verse{text-align:center;color:var(--muted);font-size:.85rem;padding-top:1rem;border-top:1px solid var(--line);margin-top:1rem}
+.verse .ar{font-family:var(--arabic);font-size:1.2rem;color:var(--text);margin-bottom:.2rem}
+
+/* dialogs */
+dialog{margin:auto;border:0;border-radius:1.25rem;background:var(--panel);color:var(--text);width:min(92vw,26rem);max-height:86vh;padding:0;overflow:hidden}
+dialog::backdrop{background:rgba(10,8,30,.7)}
+.sheet{padding:1.25rem;display:flex;flex-direction:column;gap:1rem;max-height:86vh;overflow-y:auto}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem}
+.sheet h2{font-size:1.2rem;font-weight:800}
+.solid{background:var(--bead-on);color:var(--ink);padding:.6rem 1.1rem;border-radius:999px;font-weight:800;font-size:.9rem}
+.solid:hover{background:var(--done)}
+.list{display:flex;flex-direction:column;gap:.5rem;list-style:none}
+.row{display:flex;align-items:center;gap:.75rem;padding:.75rem .9rem;background:var(--ink);border-radius:.9rem}
+.row .info{flex:1;min-width:0}
+.row .nm{font-family:var(--arabic);font-size:1.25rem;line-height:1.5}
+.row .sub{color:var(--muted);font-size:.85rem}
+.row .acts{display:flex;gap:.25rem}
+.mini{padding:.4rem .7rem;border-radius:.6rem;font-size:.85rem;font-weight:600;color:var(--muted)}
+.mini:hover{background:var(--line);color:var(--text)}
+.mini.del:hover{background:#7a2a45;color:#fff}
+label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.35rem;color:var(--muted)}
+input,textarea{width:100%;padding:.75rem .85rem;border-radius:.75rem;border:1px solid var(--line);background:var(--ink);color:var(--text);font:inherit}
+input#f-ar{font-family:var(--arabic);font-size:1.3rem}
+textarea{min-height:4rem;resize:vertical}
+.fields{display:flex;flex-direction:column;gap:.85rem}
+.foot{display:flex;justify-content:flex-end;gap:.5rem}
+
+.toast{position:fixed;left:50%;bottom:calc(1.25rem + env(safe-area-inset-bottom));transform:translate(-50%,2rem);background:var(--text);color:var(--ink);padding:.75rem 1.1rem;border-radius:.9rem;max-width:90vw;font-size:.9rem;opacity:0;transition:.3s;z-index:50;pointer-events:none;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast b{display:block}
+
+/* tablet / desktop / phone landscape: two columns */
+@media (min-width:720px),(orientation:landscape) and (min-width:560px) and (max-height:540px){
+  .app{max-width:84rem;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;
+    grid-template-areas:"bar stage" "picker stage" "dhikr stage" "verse stage";column-gap:clamp(1.5rem,5vw,4rem);align-items:start}
+  .bar{grid-area:bar}
+  .picker{grid-area:picker;flex-wrap:wrap;overflow:visible}
+  .dhikr{grid-area:dhikr;align-self:center;justify-self:center;width:min(100%,28rem)}
+  .stage{grid-area:stage;align-self:center;justify-self:center;width:100%}
+  .verse{grid-area:verse;align-self:end;text-align:left}
+  .ring{width:min(100%,34rem,calc(100dvh - 10rem))}
+}
+@media (max-height:520px) and (max-width:559px){.ring{width:min(100%,14rem)}}
+@media (max-width:360px){.row .acts{flex-direction:column}.chip{padding:.45rem .8rem}}
+@media (min-width:720px) and (max-width:1023px){.app{column-gap:1.25rem}.dhikr{padding-left:.9rem;padding-right:.9rem}}
+@media (min-width:1600px){.app{padding-top:2.5rem;padding-bottom:2.5rem}}
+@media (prefers-reduced-motion:reduce){.beads,.face,.toast{transition:none}.ring.done::before{animation:none}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="bar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+        <defs><linearGradient id="lgS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9ee"/><stop offset=".55" stop-color="#f6a5b5"/><stop offset="1" stop-color="#ffd3a3"/></linearGradient></defs>
+        <circle cx="24" cy="24" r="21" fill="none" stroke="#8f86d8" stroke-opacity=".45" stroke-width="1.2"/>
+        <g fill="url(#bOn)">
+          <circle cx="45" cy="24" r="2.3"/><circle cx="38.85" cy="38.85" r="2.3"/><circle cx="24" cy="45" r="2.3"/><circle cx="9.15" cy="38.85" r="2.3"/>
+          <circle cx="3" cy="24" r="2.3"/><circle cx="9.15" cy="9.15" r="2.3"/><circle cx="24" cy="3" r="2.3"/><circle cx="38.85" cy="9.15" r="2.3"/>
+        </g>
+        <g fill="none" stroke="url(#lgS)" stroke-width="1.6" stroke-linejoin="round">
+          <ellipse cx="24" cy="16" rx="3.6" ry="8"/><ellipse cx="24" cy="16" rx="3.6" ry="8" transform="rotate(45 24 24)"/><ellipse cx="24" cy="16" rx="3.6" ry="8" transform="rotate(90 24 24)"/><ellipse cx="24" cy="16" rx="3.6" ry="8" transform="rotate(135 24 24)"/><ellipse cx="24" cy="16" rx="3.6" ry="8" transform="rotate(180 24 24)"/><ellipse cx="24" cy="16" rx="3.6" ry="8" transform="rotate(225 24 24)"/><ellipse cx="24" cy="16" rx="3.6" ry="8" transform="rotate(270 24 24)"/><ellipse cx="24" cy="16" rx="3.6" ry="8" transform="rotate(315 24 24)"/>
+          
+        </g>
+        <circle cx="24" cy="24" r="4.6" fill="url(#bDone)"/>
+      </svg>
+      <div><div class="wm" lang="ar">تَسْبِيح</div><small>Digital Tasbeeh Counter</small></div>
+    </div>
+    <button class="ghost" id="open-manage">Manage list</button>
+  </header>
+
+  <div class="picker" id="picker" role="group" aria-label="Choose a dhikr"></div>
+
+  <section class="dhikr" aria-live="polite">
+    <div class="ar" id="d-ar" lang="ar" dir="rtl"></div>
+    <div class="tr" id="d-tr"></div>
+    <div class="mn" id="d-mn"></div>
+  </section>
+
+  <section class="stage">
+    <button class="ring" id="ring" aria-label="Count one recitation">
+      <svg viewBox="0 0 300 300" aria-hidden="true">
+        <defs>
+          <radialGradient id="bOff" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#8b80e0"/><stop offset=".55" stop-color="#443c82"/><stop offset="1" stop-color="#241f50"/></radialGradient>
+          <radialGradient id="bOn" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffe9ee"/><stop offset=".5" stop-color="#f6a5b5"/><stop offset="1" stop-color="#c25c78"/></radialGradient>
+          <radialGradient id="bDone" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff4e2"/><stop offset=".5" stop-color="#ffd3a3"/><stop offset="1" stop-color="#d48c4c"/></radialGradient>
+          <radialGradient id="bFace" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#3b3374"/><stop offset="1" stop-color="#241f4c"/></radialGradient>
+        </defs>
+        <circle class="thread" cx="150" cy="150" r="120"/>
+        <g class="beads" id="beads"></g>
+        <g class="tassel"><path d="M150 -2 L150 -24 M150 -2 L141 -20 M150 -2 L159 -20"/></g>
+        <path d="M150 13 L139 -4 Q150 -12 161 -4 Z" fill="url(#bDone)"/>
+        <g class="face">
+          <circle class="disc" cx="150" cy="150" r="98"/>
+          <circle class="rim" cx="150" cy="150" r="91"/>
+          <g class="orn"><ellipse cx="150" cy="120" rx="13" ry="30"/><ellipse cx="150" cy="120" rx="13" ry="30" transform="rotate(45 150 150)"/><ellipse cx="150" cy="120" rx="13" ry="30" transform="rotate(90 150 150)"/><ellipse cx="150" cy="120" rx="13" ry="30" transform="rotate(135 150 150)"/><ellipse cx="150" cy="120" rx="13" ry="30" transform="rotate(180 150 150)"/><ellipse cx="150" cy="120" rx="13" ry="30" transform="rotate(225 150 150)"/><ellipse cx="150" cy="120" rx="13" ry="30" transform="rotate(270 150 150)"/><ellipse cx="150" cy="120" rx="13" ry="30" transform="rotate(315 150 150)"/></g>
+          
+        </g>
+      </svg>
+      <div class="center">
+        <div class="num" id="num">0</div>
+        <div class="of" id="of">of 33</div>
+      </div>
+    </button>
+    <div class="hint" id="hint" role="status">Tap the ring to count</div>
+    <button class="reset" id="reset">Reset count</button>
+  </section>
+
+  <footer class="verse">
+    <div class="ar" lang="ar" dir="rtl">وَاذْكُرُوا اللَّهَ كَثِيرًا لَّعَلَّكُمْ تُفْلِحُونَ</div>
+    <div>Remember Allah much, that you may be successful</div>
+  </footer>
+</main>
+
+<!-- Manage list -->
+<dialog id="manage">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Your tasbeeh list</h2>
+      <button class="solid" id="add-btn">Add new</button>
+    </div>
+    <ul class="list" id="list"></ul>
+    <div class="foot"><button class="ghost" id="close-manage">Close</button></div>
+  </div>
+</dialog>
+
+<!-- Add / edit -->
+<dialog id="editor">
+  <form class="sheet" id="form" method="dialog">
+    <h2 id="form-title">Add new tasbeeh</h2>
+    <div class="fields">
+      <div><label for="f-ar">Arabic text</label><input id="f-ar" lang="ar" dir="rtl" placeholder="سُبْحَانَ اللَّهِ" required></div>
+      <div><label for="f-tr">Transliteration</label><input id="f-tr" placeholder="SubhanAllah" required></div>
+      <div><label for="f-mn">Meaning</label><textarea id="f-mn" placeholder="Glory be to Allah" required></textarea></div>
+      <div><label for="f-ct">Target count</label><input id="f-ct" type="number" min="1" max="1000" value="33" required></div>
+    </div>
+    <div class="foot">
+      <button type="button" class="ghost" id="cancel">Cancel</button>
+      <button type="submit" class="solid">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const defaults=[
+  {id:"subhanallah",name:"سُبْحَانَ اللَّهِ",translation:"SubhanAllah",meaning:"Glory be to Allah",count:33,isCustom:false},
+  {id:"alhamdulillah",name:"الْحَمْدُ لِلَّهِ",translation:"Alhamdulillah",meaning:"All praise is due to Allah",count:33,isCustom:false},
+  {id:"allahu-akbar",name:"اللَّهُ أَكْبَرُ",translation:"Allahu Akbar",meaning:"Allah is the Greatest",count:34,isCustom:false},
+  {id:"la-ilaha-illa-allah",name:"لَا إِلَٰهَ إِلَّا اللَّهُ",translation:"La ilaha illa Allah",meaning:"There is no god but Allah",count:100,isCustom:false},
+  {id:"astaghfirullah",name:"أَسْتَغْفِرُ اللَّهَ",translation:"Astaghfirullah",meaning:"I seek forgiveness from Allah",count:100,isCustom:false},
+  {id:"subhanallahi-wa-bihamdihi",name:"سُبْحَانَ اللَّهِ وَبِحَمْدِهِ",translation:"SubhanAllahi wa bihamdihi",meaning:"Glory and praise be to Allah",count:100,isCustom:false},
+  {id:"subhanallahil-azeem",name:"سُبْحَانَ اللَّهِ الْعَظِيمِ",translation:"SubhanAllahil Azeem",meaning:"Glory be to Allah, the Almighty",count:100,isCustom:false},
+  {id:"la-hawla",name:"لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ",translation:"La hawla wa la quwwata illa billah",meaning:"There is no power and no strength except with Allah",count:100,isCustom:false},
+  {id:"salawat",name:"اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ",translation:"Salawat on the Prophet",meaning:"O Allah, send blessings upon Muhammad",count:100,isCustom:false},
+  {id:"hasbunallah",name:"حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ",translation:"Hasbunallahu wa ni'mal wakeel",meaning:"Allah is enough for us, and He is the best protector",count:100,isCustom:false},
+  {id:"dua-yunus",name:"لَا إِلَٰهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ",translation:"Dua of Yunus",meaning:"There is no god but You; glory be to You, I was among the wrongdoers",count:40,isCustom:false},
+  {id:"tahlil-full",name:"لَا إِلَٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ",translation:"La ilaha illa Allah wahdahu",meaning:"There is no god but Allah alone, with no partner",count:100,isCustom:false}
+];
+const KEY='tasbeeh-entries';
+let entries=[],selected=null,count=0,editingId=null,toastTimer;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function load(){
+  let custom=[];
+  try{custom=(JSON.parse(localStorage.getItem(KEY))||[]).filter(e=>e.isCustom)}catch(e){}
+  entries=[...defaults,...custom];
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(entries))}catch(e){}}
+
+function toast(title,msg){
+  const t=$('toast');
+  t.innerHTML=`<b>${esc(title)}</b>${esc(msg)}`;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* bead ring: up to 33 beads drawn, ring turns one bead per tap */
+function beadCount(){return Math.min(selected.count,33)}
+function buildBeads(){
+  const n=beadCount(),R=120,r=Math.min(12,Math.PI*R/n*.7);
+  let h='';
+  for(let i=0;i<n;i++){
+    const a=(i/n)*2*Math.PI-Math.PI/2;
+    h+=`<circle class="bead" cx="${(150+R*Math.cos(a)).toFixed(2)}" cy="${(150+R*Math.sin(a)).toFixed(2)}" r="${r.toFixed(2)}"/>`;
+  }
+  $('beads').innerHTML=h;
+}
+function renderCounter(){
+  const n=beadCount(),total=selected.count;
+  const lit=Math.min(n,Math.floor(count/total*n+(count>=total?1:0)));
+  const beads=$('beads').children;
+  for(let i=0;i<beads.length;i++)beads[i].classList.toggle('on',i<lit);
+  $('beads').style.transform=`rotate(${-(count/total)*360}deg)`;
+  $('num').textContent=count;
+  $('of').textContent=`of ${total}`;
+  const done=count>=total;
+  $('ring').classList.toggle('done',done);
+  $('hint').textContent=done?'Complete. Tap to keep counting, or reset.':'Tap the ring to count';
+}
+function renderDhikr(){
+  $('d-ar').textContent=selected.name;
+  $('d-tr').textContent=selected.translation;
+  $('d-mn').textContent=selected.meaning;
+}
+function renderPicker(){
+  $('picker').innerHTML=entries.map(e=>`<button class="chip" data-id="${esc(e.id)}" aria-pressed="${e.id===selected.id}">${esc(e.translation)} <span aria-hidden="true">· ${e.count}</span></button>`).join('');
+}
+function renderList(){
+  $('list').innerHTML=entries.map(e=>`
+    <li class="row">
+      <div class="info"><div class="nm" lang="ar">${esc(e.name)}</div><div class="sub">${esc(e.translation)}, ${e.count}x</div></div>
+      <div class="acts" data-id="${esc(e.id)}">
+        <button class="mini" data-act="select">Use</button>
+        ${e.isCustom?'<button class="mini" data-act="edit">Edit</button><button class="mini del" data-act="delete">Delete</button>':''}
+      </div>
+    </li>`).join('');
+}
+function renderAll(){renderPicker();renderDhikr();buildBeads();renderCounter();renderList()}
+
+function select(id){
+  selected=entries.find(e=>e.id===id)||entries[0];
+  count=0;
+  $('beads').style.transition='none';
+  renderAll();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>$('beads').style.transition=''));
+}
+function increment(){
+  count++;
+  if(navigator.vibrate)navigator.vibrate(count===selected.count?[60,40,60]:12);
+  renderCounter();
+  if(count===selected.count)toast('تَبَارَكَ اللَّهُ (Tabarakallah)',`You completed ${selected.count} recitations of ${selected.translation}`);
+}
+function reset(){
+  count=0;
+  $('beads').style.transition='none';
+  renderCounter();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>$('beads').style.transition=''));
+}
+
+function openEditor(id=null){
+  editingId=id;
+  const form=$('form');
+  if(id){
+    const e=entries.find(x=>x.id===id);
+    $('form-title').textContent='Edit tasbeeh';
+    $('f-ar').value=e.name;$('f-tr').value=e.translation;$('f-mn').value=e.meaning;$('f-ct').value=e.count;
+  }else{
+    $('form-title').textContent='Add new tasbeeh';
+    form.reset();$('f-ct').value=33;
+  }
+  $('editor').showModal();
+}
+function saveEntry(ev){
+  ev.preventDefault();
+  const data={name:$('f-ar').value.trim(),translation:$('f-tr').value.trim(),meaning:$('f-mn').value.trim(),count:Math.max(1,Math.min(1000,parseInt($('f-ct').value)||33))};
+  const wasEdit=!!editingId;
+  if(wasEdit){
+    const i=entries.findIndex(x=>x.id===editingId);
+    entries[i]={...entries[i],...data};
+    if(selected.id===editingId){selected=entries[i];count=Math.min(count,selected.count)}
+  }else{
+    entries.push({id:`custom-${Date.now()}`,...data,isCustom:true});
+  }
+  save();renderAll();
+  $('editor').close();
+  toast('Saved',wasEdit?'Tasbeeh updated':'New tasbeeh added');
+}
+function remove(id){
+  if(!confirm('Delete this tasbeeh?'))return;
+  entries=entries.filter(e=>e.id!==id);
+  save();
+  if(selected.id===id){select(entries[0].id)}else renderAll();
+  toast('Deleted','Tasbeeh removed');
+}
+
+function bind(){
+  $('ring').addEventListener('click',increment);
+  $('reset').addEventListener('click',reset);
+  $('picker').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b)select(b.dataset.id)});
+  $('open-manage').addEventListener('click',()=>$('manage').showModal());
+  $('close-manage').addEventListener('click',()=>$('manage').close());
+  $('add-btn').addEventListener('click',()=>openEditor());
+  $('cancel').addEventListener('click',()=>$('editor').close());
+  $('form').addEventListener('submit',saveEntry);
+  $('list').addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    const id=b.parentElement.dataset.id,act=b.dataset.act;
+    if(act==='select'){select(id);$('manage').close()}
+    if(act==='edit')openEditor(id);
+    if(act==='delete')remove(id);
+  });
+  ['manage','editor'].forEach(id=>$(id).addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.close()}));
+}
+
+load();
+selected=entries[0];
+renderAll();
+bind();
+</script>
+</body>
+</html>
