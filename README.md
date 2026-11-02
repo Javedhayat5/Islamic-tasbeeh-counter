@@ -2,6 +2,12 @@
 
 A responsive digital Tasbeeh counter built with HTML, CSS, and vanilla JavaScript.
 
+## 🚀 Live Demo
+
+Try the application online:
+
+[Open Islamic Tasbeeh Counter](https://javedhayat5.github.io/Islamic-tasbeeh-counter/)
+
 ## Features
 - Interactive counter with animated bead ring
 - Preset Dhikr selections with Arabic text, transliteration, and meanings
@@ -10,12 +16,6 @@ A responsive digital Tasbeeh counter built with HTML, CSS, and vanilla JavaScrip
 - Completion feedback and optional device vibration
 - Responsive mobile, tablet, and desktop layout
 - Custom entries saved in the browser with localStorage
-## 🚀 Live Demo
-
-Try the application online:
-
-[Open Islamic Tasbeeh Counter](https://javedhayat5.github.io/Islamic-tasbeeh-counter/)
-
 
 ## Run locally
 Open `index.html` in a modern web browser. No build tools, package installation, API key, or backend are required.
